@@ -102,9 +102,35 @@ let state = {
   log: [],              // { nr, label, timestamp }
   sessionStartedAt: null,
   notePhotos: [],       // Blobs accumulated after stop
+  bag: [],              // Shuffled-Bag: verbleibende Kategorien dieser Runde
+  lastLabel: null,      // letzte angesagte Kategorie (für Anti-Wiederholung)
 };
 
 let journalStore = null;  // injected by initDrill
+
+// ── Shuffled-Bag ──────────────────────────────────────────────────────
+// Jede aktive Kategorie kommt gleich oft dran; maximal 2 gleiche in Folge
+// über Rundengrenze hinweg.
+
+function shuffle(arr) {
+  // Fisher-Yates in-place
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function refillBag(enabled, lastLabel) {
+  const bag = shuffle([...enabled]);
+  // Erste Karte darf nicht gleich der letzten der Vorrunde sein
+  if (lastLabel && bag.length > 1 && bag[0].label === lastLabel) {
+    // Tausche mit einer zufälligen anderen Position
+    const swapIdx = 1 + Math.floor(Math.random() * (bag.length - 1));
+    [bag[0], bag[swapIdx]] = [bag[swapIdx], bag[0]];
+  }
+  return bag;
+}
 
 // ── Core drill logic ──────────────────────────────────────────────────
 
@@ -118,7 +144,14 @@ async function announceNext() {
   const enabled = getEnabled();
   if (enabled.length < 2) { stopDrill(); showWarning(true); return; }
 
-  const cat = enabled[Math.floor(Math.random() * enabled.length)];
+  // Bag leer oder Kategorienauswahl hat sich geändert → neu befüllen
+  if (state.bag.length === 0 ||
+      state.bag.some(c => !enabled.find(e => e.id === c.id))) {
+    state.bag = refillBag(enabled, state.lastLabel);
+  }
+
+  const cat = state.bag.shift();
+  state.lastLabel = cat.label;
   state.counter++;
   state.log.push({ nr: state.counter, label: cat.label, timestamp: new Date().toISOString() });
 
@@ -160,6 +193,8 @@ function startDrill() {
   state.log = [];
   state.notePhotos = [];
   state.sessionStartedAt = new Date().toISOString();
+  state.bag = [];
+  state.lastLabel = null;
 
   document.getElementById('drill-counter').textContent = 0;
   document.getElementById('drill-start-btn').textContent = 'Stop';
