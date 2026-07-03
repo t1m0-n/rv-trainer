@@ -58,20 +58,19 @@ body {
 
 #main {
   flex: 1;
+  min-height: 0;          /* Verhindert flex-Overflow (kritisch für iOS-Scroll) */
   position: relative;
   overflow: hidden;
-  /* Unten Platz für die fixed Nav lassen:
-     --nav-height + safe-area-inset-bottom */
-  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
 }
 
 .view {
   position: absolute;
-  inset: 0;
-  overflow-y: auto;
+  top: 0; left: 0; right: 0; bottom: 0;
+  overflow-y: scroll;     /* scroll statt auto: iOS-Momentum zuverlässiger */
   overflow-x: hidden;
-  /* Oben: Statusleiste, Unten: kein extra Inset nötig, #main hat bereits Padding */
-  padding: calc(20px + env(safe-area-inset-top, 0px)) 16px 20px;
+  /* Oben: Statusleiste  |  Unten: Nav-Höhe + Home-Indicator + Content-Abstand */
+  padding: calc(20px + env(safe-area-inset-top, 0px)) 16px
+           calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 20px);
   opacity: 0;
   pointer-events: none;
   transform: translateY(8px);
@@ -1042,8 +1041,8 @@ label {
 /* ── App-Version Footer ─────────────────────────────────────────── */
 .app-version {
   text-align: center;
-  font-size: 11px;
-  color: var(--border);
+  font-size: 12px;
+  color: var(--text-muted);  /* #8888a0 — lesbar, aber dezent */
   padding: 16px 0 4px;
   letter-spacing: 0.04em;
   user-select: none;
