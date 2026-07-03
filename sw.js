@@ -1,5 +1,5 @@
 // ─── Version hier hochzählen bei jedem Deployment ───────────────────────────
-const CACHE_VERSION = 6;
+const CACHE_VERSION = 7;
 const CACHE_NAME = `rv-trainer-v${CACHE_VERSION}`;
 
 // Nur statische Assets die sich selten ändern bekommen cache-first
@@ -26,6 +26,7 @@ const PRECACHE_SHELL = [
   './js/toast.js',
   './js/wakelock.js',
   './js/lightbox.js',
+  './js/version.js',
 ];
 
 // ── Install ───────────────────────────────────────────────────────────────────

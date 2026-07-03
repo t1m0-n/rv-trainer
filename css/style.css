@@ -26,8 +26,18 @@
   padding: 0;
 }
 
-html, body {
+html {
+  /* Fallback-Kette für iOS Standalone:
+     100dvh  → moderner Standard (berücksichtigt Adressleiste dynamisch)
+     -webkit-fill-available → iOS Safari <15 Standalone-Fix
+     100%    → letzter Fallback */
   height: 100%;
+  min-height: -webkit-fill-available;
+}
+
+body {
+  min-height: 100%;
+  min-height: -webkit-fill-available;
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
@@ -41,14 +51,18 @@ html, body {
 #app {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  height: 100dvh;
+  height: 100dvh;        /* Moderner Standard */
+  height: 100svh;        /* "Small viewport height" — ignoriert Adressleiste */
+  min-height: -webkit-fill-available;  /* iOS Standalone Fallback */
 }
 
 #main {
   flex: 1;
   position: relative;
   overflow: hidden;
+  /* Unten Platz für die fixed Nav lassen:
+     --nav-height + safe-area-inset-bottom */
+  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
 }
 
 .view {
@@ -56,9 +70,8 @@ html, body {
   inset: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: calc(20px + env(safe-area-inset-top, 0px))
-           16px
-           calc(20px + env(safe-area-inset-bottom, 0px));
+  /* Oben: Statusleiste, Unten: kein extra Inset nötig, #main hat bereits Padding */
+  padding: calc(20px + env(safe-area-inset-top, 0px)) 16px 20px;
   opacity: 0;
   pointer-events: none;
   transform: translateY(8px);
@@ -74,12 +87,19 @@ html, body {
 
 /* ── Bottom Navigation ─────────────────────────────────────────── */
 #bottom-nav {
+  /* Fixed statt flex-child: sitzt immer am unteren Bildschirmrand,
+     unabhängig von Viewport-Höhen-Bugs im Standalone-Modus */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
   display: flex;
+  /* Höhe = Tap-Bereich + Home-Indicator-Inset */
   height: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--surface);
   border-top: 1px solid var(--border);
-  flex-shrink: 0;
 }
 
 .nav-btn {
@@ -1017,6 +1037,16 @@ label {
 @keyframes toastOut {
   from { opacity: 1; transform: translateY(0); }
   to { opacity: 0; transform: translateY(-8px); }
+}
+
+/* ── App-Version Footer ─────────────────────────────────────────── */
+.app-version {
+  text-align: center;
+  font-size: 11px;
+  color: var(--border);
+  padding: 16px 0 4px;
+  letter-spacing: 0.04em;
+  user-select: none;
 }
 
 /* ── Utility ────────────────────────────────────────────────────── */

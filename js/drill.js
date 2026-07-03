@@ -6,6 +6,7 @@
 
 import { showToast } from './toast.js';
 import { acquireWakeLock, releaseWakeLock } from './wakelock.js';
+import { APP_VERSION, BUILD_DATE } from './version.js';
 
 const CATEGORIES = [
   { id: 'land',       label: 'Land' },
@@ -432,6 +433,8 @@ export function initDrill(store) {
           <input type="checkbox" id="vibration-toggle" ${settings.useVibration ? 'checked' : ''}>
         </label>
       </div>
+
+      <div class="app-version">v${APP_VERSION} · ${BUILD_DATE}</div>
     </div>
   `;
 
