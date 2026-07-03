@@ -356,8 +356,10 @@ export function initJournal(store) {
       <div id="journal-modal" class="modal hidden">
         <div class="modal-backdrop"></div>
         <div class="modal-content">
-          <button class="modal-close">✕</button>
-          <div id="modal-body"></div>
+          <div class="modal-header">
+            <button class="modal-close" aria-label="Schließen">✕</button>
+          </div>
+          <div class="modal-body" id="modal-body"></div>
         </div>
       </div>
     </div>

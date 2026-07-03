@@ -785,36 +785,62 @@ label {
 }
 
 .modal-content {
-  position: relative;
+  display: flex;
+  flex-direction: column;
   background: var(--surface);
   border-radius: 20px 20px 0 0;
   border-top: 1px solid var(--border);
   width: 100%;
   max-height: 90dvh;
-  overflow-y: auto;
-  padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;   /* Scroll nur im .modal-body, nicht hier */
+}
+
+/* Griff-Indikator */
+.modal-content::before {
+  content: '';
+  display: block;
+  width: 36px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+
+/* Feste Header-Leiste mit Schließen-Button */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 12px 8px;
+  flex-shrink: 0;
 }
 
 .modal-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
   background: var(--surface2);
   border: 1px solid var(--border);
   color: var(--text);
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  font-size: 14px;
+  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
 }
 
 .modal-close:active {
-  opacity: 0.7;
+  background: var(--border);
+}
+
+/* Scrollbarer Inhalt */
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 16px calc(24px + env(safe-area-inset-bottom, 0px));
 }
 
 .modal-coordinate {
