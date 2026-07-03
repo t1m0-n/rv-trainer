@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RV Trainer">
+  <meta name="theme-color" content="#0a0a14">
+  <title>RV Trainer</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <main id="main">
+      <section id="view-drill" class="view active"></section>
+      <section id="view-session" class="view"></section>
+      <section id="view-journal" class="view"></section>
+    </main>
+    <nav id="bottom-nav">
+      <button class="nav-btn active" data-view="drill">
+        <span class="nav-icon">🎯</span>
+        <span class="nav-label">Drill</span>
+      </button>
+      <button class="nav-btn" data-view="session">
+        <span class="nav-icon">👁</span>
+        <span class="nav-label">Session</span>
+      </button>
+      <button class="nav-btn" data-view="journal">
+        <span class="nav-icon">📓</span>
+        <span class="nav-label">Journal</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
