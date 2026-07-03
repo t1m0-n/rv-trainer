@@ -1,11 +1,12 @@
 // ─── Version hier hochzählen bei jedem Deployment ───────────────────────────
-const CACHE_VERSION = 4;
+const CACHE_VERSION = 5;
 const CACHE_NAME = `rv-trainer-v${CACHE_VERSION}`;
 
 // Nur statische Assets die sich selten ändern bekommen cache-first
 const IMMUTABLE_ASSETS = [
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
 ];
 
