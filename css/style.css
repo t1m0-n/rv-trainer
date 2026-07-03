@@ -51,10 +51,7 @@ body {
   overflow: hidden;
 }
 
-/* In normalen Browsern (nicht Standalone) darf dvh als Verfeinerung greifen */
-@supports (height: 100dvh) {
-  #app { height: 100dvh; }
-}
+/* Kein dvh-Override mehr — 100% ist in allen Kontexten zuverlässiger */
 
 /* #main ist der einzige Scroll-Container.
    Als normales Flex-Kind wächst es exakt auf den freien Platz
@@ -86,12 +83,11 @@ body {
 
 /* ── Bottom Navigation ─────────────────────────────────────────── */
 #bottom-nav {
-  /* Normales Flex-Kind — sitzt verlässlich am Ende der Flex-Column.
-     Kein position:fixed mehr, kein dvh-Abhängigkeit. */
+  /* Normales Flex-Kind — sitzt verlässlich am Ende der Flex-Column. */
   flex-shrink: 0;
   display: flex;
-  height: var(--nav-height);
-  /* Wächst nach unten um den Home-Indicator-Bereich */
+  /* Gesamthöhe = Tap-Bereich + Home-Indicator-Inset (addiert, nicht darin eingerechnet) */
+  height: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--surface);
   border-top: 1px solid var(--border);
