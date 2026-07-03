@@ -58,18 +58,27 @@ if ('speechSynthesis' in window) {
   loadVoices();
 }
 
-function speak(text) {
-  if (!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.rate = 0.9; u.pitch = 1; u.volume = 1;
-  if (!voicesReady) loadVoices();
-  if (germanVoice) u.voice = germanVoice;
-  window.speechSynthesis.speak(u);
+/** Spricht den Text und gibt ein Promise zurück, das nach Abschluss resolved. */
+function speakAndWait(text) {
+  return new Promise(resolve => {
+    if (!('speechSynthesis' in window)) { resolve(); return; }
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.9; u.pitch = 1; u.volume = 1;
+    if (!voicesReady) loadVoices();
+    if (germanVoice) u.voice = germanVoice;
+    u.onend   = resolve;
+    u.onerror = resolve;  // im Fehlerfall nicht einfrieren
+    window.speechSynthesis.speak(u);
+  });
 }
 
 function vibrate(pattern) {
   if ('vibrate' in navigator) navigator.vibrate(pattern);
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function unlockSpeechAPI() {
@@ -78,6 +87,8 @@ function unlockSpeechAPI() {
   const u = new SpeechSynthesisUtterance('');
   u.volume = 0;
   window.speechSynthesis.speak(u);
+  // Sofort abbrechen — wir wollen nur die API entsperren, nicht warten
+  setTimeout(() => window.speechSynthesis.cancel(), 50);
 }
 
 // ── Module state ──────────────────────────────────────────────────────
@@ -101,17 +112,17 @@ function getEnabled() {
   return CATEGORIES.filter(c => state.settings.categories[c.id] !== false);
 }
 
-function announceNext() {
+async function announceNext() {
+  if (!state.running) return;
+
   const enabled = getEnabled();
   if (enabled.length < 2) { stopDrill(); showWarning(true); return; }
 
   const cat = enabled[Math.floor(Math.random() * enabled.length)];
   state.counter++;
-
-  // Log entry
   state.log.push({ nr: state.counter, label: cat.label, timestamp: new Date().toISOString() });
 
-  // Update UI
+  // UI aktualisieren
   const display = document.getElementById('drill-category-display');
   const counterEl = document.getElementById('drill-counter');
   if (display) {
@@ -122,9 +133,18 @@ function announceNext() {
   if (counterEl) counterEl.textContent = state.counter;
 
   const { useVibration, minInterval, maxInterval } = state.settings;
-  if (useVibration) vibrate([200, 100, 200]);
-  else speak(cat.label);
 
+  // Ansage abspielen und auf Abschluss warten → kein Überlappen möglich
+  if (useVibration) {
+    vibrate([200, 100, 200]);
+    await sleep(500);        // Vibrationsdauer abwarten
+  } else {
+    await speakAndWait(cat.label);
+  }
+
+  if (!state.running) return;  // wurde während Ansage gestoppt?
+
+  // Intervall-Pause NACH Ende der Ansage
   const delay = (Math.random() * (maxInterval - minInterval) + minInterval) * 1000;
   state.timeoutId = setTimeout(announceNext, delay);
 }
@@ -363,12 +383,12 @@ export function initDrill(store) {
         <h3>Kategorien</h3>
         <div class="category-chips" id="category-chips"></div>
 
-        <h3>Intervall</h3>
+        <h3>Intervall <span style="font-weight:400;color:var(--text-muted)">(nach Ende der Ansage)</span></h3>
         <div class="interval-row">
           <label>Min: <span id="min-val">${settings.minInterval}</span>s</label>
-          <input type="range" id="min-interval" min="3" max="30" value="${settings.minInterval}">
+          <input type="range" id="min-interval" min="2" max="30" step="0.5" value="${settings.minInterval}">
           <label>Max: <span id="max-val">${settings.maxInterval}</span>s</label>
-          <input type="range" id="max-interval" min="5" max="60" value="${settings.maxInterval}">
+          <input type="range" id="max-interval" min="2" max="60" step="0.5" value="${settings.maxInterval}">
         </div>
 
         <h3>Ausgabe</h3>
@@ -389,28 +409,33 @@ export function initDrill(store) {
     else if (state.phase === 'done') resetDrill();
   });
 
+  function fmtSec(v) {
+    // "2" statt "2.0", "2.5" statt "2.50"
+    return parseFloat(v).toString();
+  }
+
   // Min slider
   document.getElementById('min-interval').addEventListener('input', e => {
-    const val = parseInt(e.target.value, 10);
+    const val = parseFloat(e.target.value);
     settings.minInterval = val;
-    document.getElementById('min-val').textContent = val;
+    document.getElementById('min-val').textContent = fmtSec(val);
     if (val > settings.maxInterval) {
       settings.maxInterval = val;
       document.getElementById('max-interval').value = val;
-      document.getElementById('max-val').textContent = val;
+      document.getElementById('max-val').textContent = fmtSec(val);
     }
     saveSettings(settings);
   });
 
   // Max slider
   document.getElementById('max-interval').addEventListener('input', e => {
-    const val = parseInt(e.target.value, 10);
+    const val = parseFloat(e.target.value);
     settings.maxInterval = val;
-    document.getElementById('max-val').textContent = val;
+    document.getElementById('max-val').textContent = fmtSec(val);
     if (val < settings.minInterval) {
       settings.minInterval = val;
       document.getElementById('min-interval').value = val;
-      document.getElementById('min-val').textContent = val;
+      document.getElementById('min-val').textContent = fmtSec(val);
     }
     saveSettings(settings);
   });
