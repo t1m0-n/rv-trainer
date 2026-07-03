@@ -69,7 +69,7 @@ async function init() {
   const targetProvider = new PicsumProvider();
 
   initNavigation();
-  initDrill();
+  initDrill(store);
   initSession(targetProvider, store);
   initArv(targetProvider, store);
   initJournal(store);

@@ -61,7 +61,25 @@ function buildSessionCard(session) {
   card.className = 'session-card';
   card.dataset.id = session.id;
 
-  // Thumbnail
+  if (session.type === 'drill') {
+    const count = session.drillLog?.length ?? 0;
+    card.innerHTML = `
+      <div class="session-thumb-placeholder" style="font-size:26px">🎯</div>
+      <div class="session-info">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          <span class="journal-type-badge drill-badge">Drill</span>
+        </div>
+        <div class="session-date">${formatDate(session.startedAt)}</div>
+        <div class="session-meta">
+          <span class="session-score" style="color:var(--text-muted)">${count} Ansagen</span>
+          <span class="session-duration">${formatDuration(session.durationSeconds)}</span>
+        </div>
+      </div>
+    `;
+    return card;
+  }
+
+  // RV-Session
   let thumbHtml = '';
   if (session.targetBlob) {
     const url = createObjectUrl(session.targetBlob);
@@ -77,7 +95,10 @@ function buildSessionCard(session) {
   card.innerHTML = `
     ${thumbHtml}
     <div class="session-info">
-      <div class="session-coordinate">${session.coordinate}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+        <span class="journal-type-badge rv-badge">RV</span>
+        <span class="session-coordinate" style="margin-bottom:0">${session.coordinate}</span>
+      </div>
       <div class="session-date">${formatDate(session.startedAt)}</div>
       <div class="session-meta">
         <span class="session-score">${stars}</span>
@@ -89,7 +110,69 @@ function buildSessionCard(session) {
   return card;
 }
 
+function buildDrillModalContent(session, onPhotoAdded, onDelete) {
+  const div = document.createElement('div');
+  const log = session.drillLog || [];
+  const durationStr = formatDuration(session.durationSeconds);
+
+  const logRows = log.map(e => {
+    const t = new Date(e.timestamp);
+    const ts = t.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return `<div class="drill-log-row">
+      <span class="drill-log-nr">${e.nr}.</span>
+      <span class="drill-log-label">${e.label}</span>
+      <span class="drill-log-time">${ts}</span>
+    </div>`;
+  }).join('') || '<span style="color:var(--text-muted);font-size:13px">Kein Protokoll</span>';
+
+  let photosHtml = '';
+  if (session.notePhotos && session.notePhotos.length > 0) {
+    photosHtml = `<div class="photo-grid">${session.notePhotos.map((blob, i) => {
+      const url = createObjectUrl(blob);
+      return `<img class="photo-thumb" src="${url}" alt="Foto ${i + 1}">`;
+    }).join('')}</div>`;
+  }
+
+  div.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span class="journal-type-badge drill-badge">Drill</span>
+      <span style="font-size:13px;color:var(--text-muted)">${formatDate(session.startedAt)}</span>
+    </div>
+    <div class="modal-date" style="margin-bottom:16px">Dauer: ${durationStr} · ${log.length} Ansagen</div>
+
+    <div class="modal-section">
+      <div class="modal-label">Protokoll</div>
+      <div class="drill-log-list modal-drill-log">${logRows}</div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">Kritzel-Blatt (${session.notePhotos?.length || 0} Fotos)</div>
+      ${photosHtml || '<div style="font-size:13px;color:var(--text-muted)">Keine Fotos</div>'}
+      <label class="photo-upload-label" style="margin-top:8px">
+        📷 Fotos hinzufügen
+        <input type="file" accept="image/*" capture="environment" multiple id="modal-drill-photo-input">
+      </label>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-danger" id="modal-delete-btn">🗑 Löschen</button>
+    </div>
+  `;
+
+  div.querySelector('#modal-drill-photo-input').addEventListener('change', async e => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    const blobs = await Promise.all(files.map(f => f.arrayBuffer().then(buf => new Blob([buf], { type: f.type }))));
+    await onPhotoAdded(blobs);
+  });
+  div.querySelector('#modal-delete-btn').addEventListener('click', () => onDelete());
+
+  return div;
+}
+
 function buildModalContent(session, onPhotoAdded, onDelete) {
+  if (session.type === 'drill') return buildDrillModalContent(session, onPhotoAdded, onDelete);
+
   const div = document.createElement('div');
 
   // Target image

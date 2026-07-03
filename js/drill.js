@@ -1,7 +1,10 @@
 /**
  * Ideogramm-Drill Modul
  * Announces random RV target categories via speech synthesis (or vibration).
+ * Logs every announcement; after stop the log can be saved as a drill session.
  */
+
+import { showToast } from './toast.js';
 
 const CATEGORIES = [
   { id: 'land',       label: 'Land' },
@@ -19,7 +22,6 @@ function loadSettings() {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) return JSON.parse(raw);
   } catch (_) {}
-  // Defaults
   return {
     minInterval: 5,
     maxInterval: 15,
@@ -28,11 +30,17 @@ function loadSettings() {
   };
 }
 
-function saveSettings(settings) {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+function saveSettings(s) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
 }
 
-// --- Speech API helpers ---
+function generateId() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+// ── Speech API ────────────────────────────────────────────────────────
+
 let germanVoice = null;
 let voicesReady = false;
 
@@ -44,29 +52,23 @@ function loadVoices() {
   }
 }
 
-// Voices load asynchronously on iOS
 if ('speechSynthesis' in window) {
   window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
-  loadVoices(); // Try synchronous too (works on some browsers)
+  loadVoices();
 }
 
 function speak(text) {
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 0.9;
-  utterance.pitch = 1;
-  utterance.volume = 1;
-  // Re-try voice assignment in case it loaded late
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 0.9; u.pitch = 1; u.volume = 1;
   if (!voicesReady) loadVoices();
-  if (germanVoice) utterance.voice = germanVoice;
-  window.speechSynthesis.speak(utterance);
+  if (germanVoice) u.voice = germanVoice;
+  window.speechSynthesis.speak(u);
 }
 
 function vibrate(pattern) {
-  if ('vibrate' in navigator) {
-    navigator.vibrate(pattern);
-  }
+  if ('vibrate' in navigator) navigator.vibrate(pattern);
 }
 
 function unlockSpeechAPI() {
@@ -77,102 +79,234 @@ function unlockSpeechAPI() {
   window.speechSynthesis.speak(u);
 }
 
-// --- Module state ---
-let drillState = {
+// ── Module state ──────────────────────────────────────────────────────
+
+let state = {
   running: false,
+  phase: 'idle',        // 'idle' | 'running' | 'done'
   counter: 0,
   timeoutId: null,
   settings: null,
+  log: [],              // { nr, label, timestamp }
+  sessionStartedAt: null,
+  notePhotos: [],       // Blobs accumulated after stop
 };
 
-function getEnabledCategories() {
-  return CATEGORIES.filter(c => drillState.settings.categories[c.id] !== false);
-}
+let journalStore = null;  // injected by initDrill
 
-function randomBetween(min, max) {
-  return Math.random() * (max - min) + min;
+// ── Core drill logic ──────────────────────────────────────────────────
+
+function getEnabled() {
+  return CATEGORIES.filter(c => state.settings.categories[c.id] !== false);
 }
 
 function announceNext() {
-  const enabled = getEnabledCategories();
-  if (enabled.length < 2) {
-    stopDrill();
-    showWarning(true);
-    return;
-  }
+  const enabled = getEnabled();
+  if (enabled.length < 2) { stopDrill(); showWarning(true); return; }
 
-  const category = enabled[Math.floor(Math.random() * enabled.length)];
-  drillState.counter++;
+  const cat = enabled[Math.floor(Math.random() * enabled.length)];
+  state.counter++;
+
+  // Log entry
+  state.log.push({ nr: state.counter, label: cat.label, timestamp: new Date().toISOString() });
 
   // Update UI
   const display = document.getElementById('drill-category-display');
-  const counter = document.getElementById('drill-counter');
+  const counterEl = document.getElementById('drill-counter');
   if (display) {
-    display.textContent = category.label;
+    display.textContent = cat.label;
     display.classList.add('pulsing');
     setTimeout(() => display.classList.remove('pulsing'), 800);
   }
-  if (counter) counter.textContent = drillState.counter;
+  if (counterEl) counterEl.textContent = state.counter;
 
-  // Announce
-  const { useVibration, minInterval, maxInterval } = drillState.settings;
-  if (useVibration) {
-    vibrate([200, 100, 200]);
-  } else {
-    speak(category.label);
-  }
+  const { useVibration, minInterval, maxInterval } = state.settings;
+  if (useVibration) vibrate([200, 100, 200]);
+  else speak(cat.label);
 
-  // Schedule next
-  const delay = randomBetween(minInterval, maxInterval) * 1000;
-  drillState.timeoutId = setTimeout(announceNext, delay);
+  const delay = (Math.random() * (maxInterval - minInterval) + minInterval) * 1000;
+  state.timeoutId = setTimeout(announceNext, delay);
 }
 
 function startDrill() {
-  const enabled = getEnabledCategories();
-  if (enabled.length < 2) {
-    showWarning(true);
-    return;
-  }
+  const enabled = getEnabled();
+  if (enabled.length < 2) { showWarning(true); return; }
 
   showWarning(false);
-  drillState.running = true;
-  drillState.counter = 0;
+  state.running = true;
+  state.phase = 'running';
+  state.counter = 0;
+  state.log = [];
+  state.notePhotos = [];
+  state.sessionStartedAt = new Date().toISOString();
 
-  const counter = document.getElementById('drill-counter');
-  if (counter) counter.textContent = 0;
-
-  const btn = document.getElementById('drill-start-btn');
-  if (btn) btn.textContent = 'Stop';
+  document.getElementById('drill-counter').textContent = 0;
+  document.getElementById('drill-start-btn').textContent = 'Stop';
 
   const display = document.getElementById('drill-category-display');
   if (display) display.textContent = '—';
 
-  // iOS: unlock speech API on user gesture
-  unlockSpeechAPI();
+  // Hide settings while running
+  document.querySelector('.settings-card')?.classList.add('hidden');
+  document.getElementById('drill-done-section')?.classList.add('hidden');
 
-  // Start loop
+  unlockSpeechAPI();
   announceNext();
 }
 
 function stopDrill() {
-  drillState.running = false;
-  clearTimeout(drillState.timeoutId);
-  drillState.timeoutId = null;
+  state.running = false;
+  state.phase = 'done';
+  clearTimeout(state.timeoutId);
+  state.timeoutId = null;
 
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   if ('vibrate' in navigator) navigator.vibrate(0);
 
-  const btn = document.getElementById('drill-start-btn');
-  if (btn) btn.textContent = 'Start';
+  document.getElementById('drill-start-btn').textContent = 'Neue Runde';
+
+  // Show done section, hide settings
+  document.querySelector('.settings-card')?.classList.add('hidden');
+  renderDoneSection();
+  document.getElementById('drill-done-section')?.classList.remove('hidden');
+}
+
+function resetDrill() {
+  state.phase = 'idle';
+  state.counter = 0;
+  state.log = [];
+  state.notePhotos = [];
+  state.sessionStartedAt = null;
+
+  document.getElementById('drill-counter').textContent = 0;
+  document.getElementById('drill-start-btn').textContent = 'Start';
 
   const display = document.getElementById('drill-category-display');
   if (display) display.textContent = '—';
+
+  document.querySelector('.settings-card')?.classList.remove('hidden');
+  document.getElementById('drill-done-section')?.classList.add('hidden');
 }
 
 function showWarning(visible) {
-  const el = document.getElementById('drill-warning');
-  if (el) el.classList.toggle('visible', visible);
+  document.getElementById('drill-warning')?.classList.toggle('visible', visible);
 }
+
+// ── Done-Section: Protokoll + Speichern ───────────────────────────────
+
+function renderDoneSection() {
+  const section = document.getElementById('drill-done-section');
+  if (!section) return;
+
+  const endedAt = new Date();
+  const startedAt = new Date(state.sessionStartedAt);
+  const durationSec = Math.round((endedAt - startedAt) / 1000);
+  const durationStr = durationSec < 60
+    ? `${durationSec}s`
+    : `${Math.floor(durationSec / 60)}m ${durationSec % 60}s`;
+
+  const logRows = state.log.map(entry => {
+    const t = new Date(entry.timestamp);
+    const ts = t.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return `<div class="drill-log-row">
+      <span class="drill-log-nr">${entry.nr}.</span>
+      <span class="drill-log-label">${entry.label}</span>
+      <span class="drill-log-time">${ts}</span>
+    </div>`;
+  }).join('');
+
+  section.innerHTML = `
+    <div class="drill-log-card card">
+      <div class="drill-log-header">
+        <span>${state.log.length} Ansagen · ${durationStr}</span>
+        <span style="color:var(--text-muted);font-size:12px">${startedAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
+      </div>
+      <div class="drill-log-list" id="drill-log-list">${logRows || '<span style="color:var(--text-muted);font-size:13px">Keine Ansagen protokolliert.</span>'}</div>
+    </div>
+
+    <div class="card" style="margin-top:10px" id="drill-photo-card">
+      <div class="modal-label">Foto des Kritzel-Blatts (optional)</div>
+      <div class="photo-grid" id="drill-photo-grid"></div>
+      <label class="photo-upload-label" style="margin-top:8px">
+        📷 Foto aufnehmen
+        <input type="file" accept="image/*" capture="environment" multiple id="drill-photo-input">
+      </label>
+    </div>
+
+    <button id="drill-save-btn" class="btn-primary btn-large">💾 Im Journal speichern</button>
+  `;
+
+  // Photo input
+  section.querySelector('#drill-photo-input').addEventListener('change', async e => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    const blobs = await Promise.all(files.map(f =>
+      f.arrayBuffer().then(buf => new Blob([buf], { type: f.type }))
+    ));
+    state.notePhotos.push(...blobs);
+    renderPhotoGrid();
+    showToast(`${files.length} Foto(s) hinzugefügt`, 'success');
+  });
+
+  // Save button
+  section.querySelector('#drill-save-btn').addEventListener('click', saveDrillSession);
+}
+
+function renderPhotoGrid() {
+  const grid = document.getElementById('drill-photo-grid');
+  if (!grid) return;
+  grid.innerHTML = state.notePhotos.map((b, i) => {
+    const url = URL.createObjectURL(b);
+    return `<img class="photo-thumb" src="${url}" alt="Foto ${i+1}">`;
+  }).join('');
+}
+
+async function saveDrillSession() {
+  if (!journalStore) { showToast('Journal nicht verfügbar', 'error'); return; }
+
+  const btn = document.getElementById('drill-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Wird gespeichert…'; }
+
+  try {
+    const endedAt = new Date().toISOString();
+    const durationSec = Math.round(
+      (new Date(endedAt) - new Date(state.sessionStartedAt)) / 1000
+    );
+
+    await journalStore.saveSession({
+      id: generateId(),
+      type: 'drill',
+      coordinate: null,
+      startedAt: state.sessionStartedAt,
+      endedAt,
+      durationSeconds: durationSec,
+      score: 0,
+      notes: null,
+      targetBlob: null,
+      targetMetadata: null,
+      notePhotos: [...state.notePhotos],
+      drillLog: [...state.log],
+      drillSettings: { ...state.settings },
+    });
+
+    showToast('Drill-Session gespeichert ✓', 'success');
+
+    // Replace done section with confirmation
+    const section = document.getElementById('drill-done-section');
+    if (section) {
+      section.innerHTML = `
+        <div class="saved-message" style="font-size:18px">✓ Gespeichert</div>
+        <button id="drill-reset-btn" class="btn-secondary btn-large">Neue Runde</button>
+      `;
+      section.querySelector('#drill-reset-btn').addEventListener('click', resetDrill);
+    }
+  } catch (err) {
+    showToast(`Fehler: ${err.message}`, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Im Journal speichern'; }
+  }
+}
+
+// ── Chip-Rendering ────────────────────────────────────────────────────
 
 function renderChips(settings) {
   const container = document.getElementById('category-chips');
@@ -186,18 +320,22 @@ function renderChips(settings) {
       settings.categories[cat.id] = !settings.categories[cat.id];
       chip.classList.toggle('active', settings.categories[cat.id]);
       saveSettings(settings);
-      showWarning(getEnabledCategories().length < 2);
+      showWarning(getEnabled().length < 2);
     });
     container.appendChild(chip);
   });
 }
 
-export function initDrill() {
+// ── Init ──────────────────────────────────────────────────────────────
+
+export function initDrill(store) {
+  journalStore = store;
+
   const container = document.getElementById('view-drill');
   if (!container) return;
 
   const settings = loadSettings();
-  drillState.settings = settings;
+  state.settings = settings;
 
   container.innerHTML = `
     <div class="drill-container">
@@ -215,21 +353,18 @@ export function initDrill() {
         Mindestens 2 Kategorien müssen aktiviert sein.
       </div>
 
+      <!-- Protokoll + Speichern (nach Stop) -->
+      <div id="drill-done-section" class="hidden"></div>
+
       <div class="settings-card">
         <h3>Kategorien</h3>
         <div class="category-chips" id="category-chips"></div>
 
         <h3>Intervall</h3>
         <div class="interval-row">
-          <label>
-            Min:
-            <span id="min-val">${settings.minInterval}</span>s
-          </label>
+          <label>Min: <span id="min-val">${settings.minInterval}</span>s</label>
           <input type="range" id="min-interval" min="3" max="30" value="${settings.minInterval}">
-          <label>
-            Max:
-            <span id="max-val">${settings.maxInterval}</span>s
-          </label>
+          <label>Max: <span id="max-val">${settings.maxInterval}</span>s</label>
           <input type="range" id="max-interval" min="5" max="60" value="${settings.maxInterval}">
         </div>
 
@@ -244,21 +379,18 @@ export function initDrill() {
 
   renderChips(settings);
 
-  // Start/Stop
+  // Start / Stop / Neue Runde
   document.getElementById('drill-start-btn').addEventListener('click', () => {
-    if (drillState.running) {
-      stopDrill();
-    } else {
-      startDrill();
-    }
+    if (state.phase === 'idle') startDrill();
+    else if (state.phase === 'running') stopDrill();
+    else if (state.phase === 'done') resetDrill();
   });
 
-  // Min interval slider
+  // Min slider
   document.getElementById('min-interval').addEventListener('input', e => {
     const val = parseInt(e.target.value, 10);
     settings.minInterval = val;
     document.getElementById('min-val').textContent = val;
-    // Ensure min <= max
     if (val > settings.maxInterval) {
       settings.maxInterval = val;
       document.getElementById('max-interval').value = val;
@@ -267,12 +399,11 @@ export function initDrill() {
     saveSettings(settings);
   });
 
-  // Max interval slider
+  // Max slider
   document.getElementById('max-interval').addEventListener('input', e => {
     const val = parseInt(e.target.value, 10);
     settings.maxInterval = val;
     document.getElementById('max-val').textContent = val;
-    // Ensure max >= min
     if (val < settings.minInterval) {
       settings.minInterval = val;
       document.getElementById('min-interval').value = val;
