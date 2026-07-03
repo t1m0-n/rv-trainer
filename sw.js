@@ -1,5 +1,5 @@
 // ─── Version hier hochzählen bei jedem Deployment ───────────────────────────
-const CACHE_VERSION = 8;
+const CACHE_VERSION = 9;
 const CACHE_NAME = `rv-trainer-v${CACHE_VERSION}`;
 
 // Nur statische Assets die sich selten ändern bekommen cache-first

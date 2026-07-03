@@ -96,12 +96,15 @@ async function requestPersistentStorage() {
 function initNavigation() {
   const navBtns = document.querySelectorAll('.nav-btn');
   const views   = document.querySelectorAll('.view');
+  const main    = document.getElementById('main');
 
   navBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const targetView = btn.dataset.view;
       navBtns.forEach(b => b.classList.toggle('active', b === btn));
       views.forEach(v => v.classList.toggle('active', v.id === `view-${targetView}`));
+      // Scroll zurücksetzen wenn Tab gewechselt wird
+      if (main) main.scrollTop = 0;
     });
   });
 }

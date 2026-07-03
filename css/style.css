@@ -27,17 +27,13 @@
 }
 
 html {
-  /* Fallback-Kette für iOS Standalone:
-     100dvh  → moderner Standard (berücksichtigt Adressleiste dynamisch)
-     -webkit-fill-available → iOS Safari <15 Standalone-Fix
-     100%    → letzter Fallback */
+  /* Echte 100%-Kette — in iOS Standalone die zuverlässigste Methode.
+     dvh/svh greifen in der Standalone-Hülle nicht immer korrekt. */
   height: 100%;
-  min-height: -webkit-fill-available;
 }
 
 body {
-  min-height: 100%;
-  min-height: -webkit-fill-available;
+  height: 100%;
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
@@ -51,51 +47,51 @@ body {
 #app {
   display: flex;
   flex-direction: column;
-  height: 100dvh;        /* Moderner Standard */
-  height: 100svh;        /* "Small viewport height" — ignoriert Adressleiste */
-  min-height: -webkit-fill-available;  /* iOS Standalone Fallback */
-}
-
-#main {
-  flex: 1;
-  min-height: 0;          /* Verhindert flex-Overflow (kritisch für iOS-Scroll) */
-  position: relative;
+  height: 100%;
   overflow: hidden;
 }
 
-.view {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  overflow-y: scroll;     /* scroll statt auto: iOS-Momentum zuverlässiger */
+/* In normalen Browsern (nicht Standalone) darf dvh als Verfeinerung greifen */
+@supports (height: 100dvh) {
+  #app { height: 100dvh; }
+}
+
+/* #main ist der einzige Scroll-Container.
+   Als normales Flex-Kind wächst es exakt auf den freien Platz
+   zwischen Header (0) und Bottom-Nav — kein dvh-Bug möglich. */
+#main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   overflow-x: hidden;
-  /* Oben: Statusleiste  |  Unten: Nav-Höhe + Home-Indicator + Content-Abstand */
-  padding: calc(20px + env(safe-area-inset-top, 0px)) 16px
-           calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 20px);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(8px);
-  transition: opacity var(--transition), transform var(--transition);
   -webkit-overflow-scrolling: touch;
 }
 
+/* Views: normale Block-Elemente; nur die aktive sichtbar.
+   Kein position:absolute — #main ist der Scroll-Container. */
+.view {
+  display: none;
+  padding: calc(20px + env(safe-area-inset-top, 0px)) 16px 20px;
+}
+
 .view.active {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
+  display: block;
+  animation: viewIn 0.2s ease forwards;
+}
+
+@keyframes viewIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Bottom Navigation ─────────────────────────────────────────── */
 #bottom-nav {
-  /* Fixed statt flex-child: sitzt immer am unteren Bildschirmrand,
-     unabhängig von Viewport-Höhen-Bugs im Standalone-Modus */
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
+  /* Normales Flex-Kind — sitzt verlässlich am Ende der Flex-Column.
+     Kein position:fixed mehr, kein dvh-Abhängigkeit. */
+  flex-shrink: 0;
   display: flex;
-  /* Höhe = Tap-Bereich + Home-Indicator-Inset */
-  height: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
+  height: var(--nav-height);
+  /* Wächst nach unten um den Home-Indicator-Bereich */
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--surface);
   border-top: 1px solid var(--border);
@@ -1071,7 +1067,7 @@ label {
 }
 
 /* ── Scrollbar Styling ─────────────────────────────────────────── */
-.view::-webkit-scrollbar,
+#main::-webkit-scrollbar,
 .modal-content::-webkit-scrollbar {
   width: 0;
 }
