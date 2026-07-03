@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rv-trainer-v2';
+const CACHE_NAME = 'rv-trainer-v3';
 
 const PRECACHE_ASSETS = [
   './',
@@ -13,6 +13,8 @@ const PRECACHE_ASSETS = [
   './js/target-provider.js',
   './js/journal-store.js',
   './js/toast.js',
+  './js/wakelock.js',
+  './js/lightbox.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',

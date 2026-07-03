@@ -4,6 +4,7 @@
  */
 
 import { showToast } from './toast.js';
+import { acquireWakeLock, releaseWakeLock } from './wakelock.js';
 
 const SCORE_LABELS = [
   '0 – Kein Treffer',
@@ -224,10 +225,12 @@ export function initSession(targetProvider, journalStore) {
 
     showPhase('active');
     startTimer();
+    acquireWakeLock();
   }
 
   async function endSession() {
     stopTimer();
+    releaseWakeLock();
     const endedAt = new Date().toISOString();
     const durationSeconds = elapsedSeconds;
 

@@ -5,6 +5,7 @@
  */
 
 import { showToast } from './toast.js';
+import { acquireWakeLock, releaseWakeLock } from './wakelock.js';
 
 const CATEGORIES = [
   { id: 'land',       label: 'Land' },
@@ -150,6 +151,7 @@ function startDrill() {
   document.querySelector('.settings-card')?.classList.add('hidden');
   document.getElementById('drill-done-section')?.classList.add('hidden');
 
+  acquireWakeLock();
   unlockSpeechAPI();
   announceNext();
 }
@@ -160,6 +162,7 @@ function stopDrill() {
   clearTimeout(state.timeoutId);
   state.timeoutId = null;
 
+  releaseWakeLock();
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   if ('vibrate' in navigator) navigator.vibrate(0);
 

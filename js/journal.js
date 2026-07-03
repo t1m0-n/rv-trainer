@@ -4,6 +4,7 @@
  */
 
 import { showToast } from './toast.js';
+import { openLightbox } from './lightbox.js';
 
 // Track created object URLs to revoke them on cleanup
 const activeObjectUrls = [];
@@ -115,49 +116,64 @@ function buildDrillModalContent(session, onPhotoAdded, onDelete) {
   const log = session.drillLog || [];
   const durationStr = formatDuration(session.durationSeconds);
 
-  const logRows = log.map(e => {
-    const t = new Date(e.timestamp);
-    const ts = t.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const logRowsHtml = log.map(e => {
+    const ts = new Date(e.timestamp).toLocaleTimeString('de-DE', {
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
     return `<div class="drill-log-row">
       <span class="drill-log-nr">${e.nr}.</span>
       <span class="drill-log-label">${e.label}</span>
       <span class="drill-log-time">${ts}</span>
     </div>`;
-  }).join('') || '<span style="color:var(--text-muted);font-size:13px">Kein Protokoll</span>';
-
-  let photosHtml = '';
-  if (session.notePhotos && session.notePhotos.length > 0) {
-    photosHtml = `<div class="photo-grid">${session.notePhotos.map((blob, i) => {
-      const url = createObjectUrl(blob);
-      return `<img class="photo-thumb" src="${url}" alt="Foto ${i + 1}">`;
-    }).join('')}</div>`;
-  }
+  }).join('') || '<span style="font-size:13px;color:var(--text-muted)">Kein Protokoll</span>';
 
   div.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
       <span class="journal-type-badge drill-badge">Drill</span>
       <span style="font-size:13px;color:var(--text-muted)">${formatDate(session.startedAt)}</span>
     </div>
-    <div class="modal-date" style="margin-bottom:16px">Dauer: ${durationStr} · ${log.length} Ansagen</div>
+    <div class="modal-date" style="margin-bottom:14px">Dauer: ${durationStr} · ${log.length} Ansagen</div>
 
-    <div class="modal-section">
-      <div class="modal-label">Protokoll</div>
-      <div class="drill-log-list modal-drill-log">${logRows}</div>
+    <!-- Foto + Protokoll nebeneinander -->
+    <div class="drill-split-layout">
+      <div class="drill-split-photos">
+        <div class="modal-label" style="margin-bottom:6px">Kritzel-Blatt</div>
+        <div id="drill-modal-photo-grid" class="drill-photo-col"></div>
+        <label class="photo-upload-label" style="margin-top:8px;display:inline-flex">
+          📷 Fotos
+          <input type="file" accept="image/*" capture="environment" multiple id="modal-drill-photo-input">
+        </label>
+      </div>
+      <div class="drill-split-log">
+        <div class="modal-label" style="margin-bottom:6px">Protokoll</div>
+        <div class="drill-log-list drill-log-modal">${logRowsHtml}</div>
+      </div>
     </div>
 
-    <div class="modal-section">
-      <div class="modal-label">Kritzel-Blatt (${session.notePhotos?.length || 0} Fotos)</div>
-      ${photosHtml || '<div style="font-size:13px;color:var(--text-muted)">Keine Fotos</div>'}
-      <label class="photo-upload-label" style="margin-top:8px">
-        📷 Fotos hinzufügen
-        <input type="file" accept="image/*" capture="environment" multiple id="modal-drill-photo-input">
-      </label>
-    </div>
-
-    <div class="modal-actions">
+    <div class="modal-actions" style="margin-top:16px">
       <button class="btn-danger" id="modal-delete-btn">🗑 Löschen</button>
     </div>
   `;
+
+  // Fotos rendern + Lightbox verdrahten
+  const photoGrid = div.querySelector('#drill-modal-photo-grid');
+  function renderPhotos(photos) {
+    photoGrid.innerHTML = '';
+    if (!photos || photos.length === 0) {
+      photoGrid.innerHTML = '<span style="font-size:12px;color:var(--text-muted)">Keine Fotos</span>';
+      return;
+    }
+    photos.forEach((blob, i) => {
+      const url = createObjectUrl(blob);
+      const img = document.createElement('img');
+      img.className = 'drill-photo-thumb lb-trigger';
+      img.src = url;
+      img.alt = `Foto ${i + 1}`;
+      img.addEventListener('click', () => openLightbox(url, { log }));
+      photoGrid.appendChild(img);
+    });
+  }
+  renderPhotos(session.notePhotos);
 
   div.querySelector('#modal-drill-photo-input').addEventListener('change', async e => {
     const files = Array.from(e.target.files);
@@ -175,29 +191,11 @@ function buildModalContent(session, onPhotoAdded, onDelete) {
 
   const div = document.createElement('div');
 
-  // Target image
-  let imgHtml = '<div style="color:var(--text-muted);text-align:center;padding:32px">Kein Bild</div>';
-  let objectUrl = null;
-  if (session.targetBlob) {
-    objectUrl = createObjectUrl(session.targetBlob);
-    imgHtml = `<img class="modal-image" src="${objectUrl}" alt="Target ${session.coordinate}">`;
-  }
-
-  // Note photos
-  let photosHtml = '';
-  if (session.notePhotos && session.notePhotos.length > 0) {
-    const photoImgs = session.notePhotos.map((blob, i) => {
-      const url = createObjectUrl(blob);
-      return `<img class="photo-thumb" src="${url}" alt="Notizfoto ${i + 1}">`;
-    }).join('');
-    photosHtml = `<div class="photo-grid">${photoImgs}</div>`;
-  }
-
   div.innerHTML = `
     <div class="modal-coordinate">${session.coordinate}</div>
     <div class="modal-date">${formatDate(session.startedAt)}</div>
 
-    ${imgHtml}
+    <div id="rv-modal-target-wrap"></div>
 
     <div class="modal-section">
       <div class="modal-label">Bewertung</div>
@@ -218,7 +216,7 @@ function buildModalContent(session, onPhotoAdded, onDelete) {
 
     <div class="modal-section">
       <div class="modal-label">Notizfotos</div>
-      ${photosHtml || '<div style="font-size:13px;color:var(--text-muted)">Keine Fotos</div>'}
+      <div id="rv-modal-photos"></div>
       <label class="photo-upload-label" style="margin-top:8px">
         📷 Fotos hinzufügen
         <input type="file" accept="image/*" capture="environment" multiple id="modal-photo-input">
@@ -230,16 +228,47 @@ function buildModalContent(session, onPhotoAdded, onDelete) {
     </div>
   `;
 
+  // Target image — klickbar für Lightbox
+  const targetWrap = div.querySelector('#rv-modal-target-wrap');
+  if (session.targetBlob) {
+    const targetUrl = createObjectUrl(session.targetBlob);
+    const img = document.createElement('img');
+    img.className = 'modal-image lb-trigger';
+    img.src = targetUrl;
+    img.alt = `Target ${session.coordinate}`;
+    img.addEventListener('click', () => openLightbox(targetUrl));
+    targetWrap.appendChild(img);
+  } else {
+    targetWrap.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:32px">Kein Bild</div>';
+  }
+
+  // Notizfotos — klickbar für Lightbox
+  const photosEl = div.querySelector('#rv-modal-photos');
+  if (session.notePhotos && session.notePhotos.length > 0) {
+    const grid = document.createElement('div');
+    grid.className = 'photo-grid';
+    session.notePhotos.forEach((blob, i) => {
+      const url = createObjectUrl(blob);
+      const img = document.createElement('img');
+      img.className = 'photo-thumb lb-trigger';
+      img.src = url;
+      img.alt = `Notizfoto ${i + 1}`;
+      img.addEventListener('click', () => openLightbox(url));
+      grid.appendChild(img);
+    });
+    photosEl.appendChild(grid);
+  } else {
+    photosEl.innerHTML = '<div style="font-size:13px;color:var(--text-muted)">Keine Fotos</div>';
+  }
+
   // Photo upload handler
-  const photoInput = div.querySelector('#modal-photo-input');
-  photoInput.addEventListener('change', async e => {
+  div.querySelector('#modal-photo-input').addEventListener('change', async e => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     const blobs = await Promise.all(files.map(f => f.arrayBuffer().then(buf => new Blob([buf], { type: f.type }))));
     await onPhotoAdded(blobs);
   });
 
-  // Delete handler
   div.querySelector('#modal-delete-btn').addEventListener('click', () => onDelete());
 
   return div;
