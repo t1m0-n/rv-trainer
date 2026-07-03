@@ -12,12 +12,65 @@ import { PicsumProvider }  from './target-provider.js';
 import { showToast }       from './toast.js';
 export { showToast };
 
-// ── Service Worker ──────────────────────────────────────────────────
+// ── Service Worker + Update-Banner ─────────────────────────────────
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').then(reg => {
-    console.log('[App] Service Worker registered', reg.scope);
+    console.log('[App] SW registered', reg.scope);
+
+    // Zeigt den Update-Banner wenn ein neuer SW wartet
+    function onUpdateReady(worker) {
+      showUpdateBanner(() => {
+        // Nutzer hat "Neu laden" geklickt → SW übernehmen lassen
+        worker.postMessage({ type: 'SKIP_WAITING' });
+      });
+    }
+
+    // Fall 1: SW wartet bereits beim Laden (z.B. nach hartem Reload)
+    if (reg.waiting) {
+      onUpdateReady(reg.waiting);
+    }
+
+    // Fall 2: Neuer SW installiert sich während die App läuft
+    reg.addEventListener('updatefound', () => {
+      const installing = reg.installing;
+      if (!installing) return;
+      installing.addEventListener('statechange', () => {
+        if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+          onUpdateReady(installing);
+        }
+      });
+    });
+
+    // Fall 3: Sobald der neue SW übernimmt → Seite neu laden
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) { refreshing = true; window.location.reload(); }
+    });
+
   }).catch(err => {
-    console.warn('[App] Service Worker registration failed:', err);
+    console.warn('[App] SW registration failed:', err);
+  });
+}
+
+function showUpdateBanner(onReload) {
+  // Schon ein Banner aktiv?
+  if (document.getElementById('update-banner')) return;
+
+  const banner = document.createElement('div');
+  banner.id = 'update-banner';
+  banner.innerHTML = `
+    <span>Update verfügbar</span>
+    <button id="update-reload-btn">Neu laden</button>
+    <button id="update-dismiss-btn" aria-label="Schließen">✕</button>
+  `;
+  document.body.appendChild(banner);
+
+  document.getElementById('update-reload-btn').addEventListener('click', () => {
+    banner.remove();
+    onReload();
+  });
+  document.getElementById('update-dismiss-btn').addEventListener('click', () => {
+    banner.remove();
   });
 }
 

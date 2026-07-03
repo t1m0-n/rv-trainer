@@ -931,6 +931,53 @@ label {
   width: 100%;
 }
 
+/* ── Update-Banner ─────────────────────────────────────────────── */
+#update-banner {
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  left: 0;
+  right: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--primary);
+  font-size: 14px;
+  color: var(--text);
+  animation: toastIn 0.3s ease;
+}
+
+#update-banner span { flex: 1; }
+
+#update-reload-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+
+#update-reload-btn:active { background: var(--primary-dark); }
+
+#update-dismiss-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 6px;
+  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
 /* ── Toast Notifications ───────────────────────────────────────── */
 #toast-container {
   position: fixed;
