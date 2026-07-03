@@ -3,15 +3,16 @@
  * Bootstraps all modules and manages tab navigation.
  */
 
-import { initDrill } from './drill.js';
+import { initDrill }   from './drill.js';
 import { initSession } from './session.js';
+import { initArv }     from './arv.js';
 import { initJournal } from './journal.js';
-import { IndexedDBStore } from './journal-store.js';
-import { PicsumProvider } from './target-provider.js';
-import { showToast } from './toast.js';
+import { IndexedDBStore }  from './journal-store.js';
+import { PicsumProvider }  from './target-provider.js';
+import { showToast }       from './toast.js';
 export { showToast };
 
-// ── Service Worker ──────────────────────────────────────────────
+// ── Service Worker ──────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').then(reg => {
     console.log('[App] Service Worker registered', reg.scope);
@@ -20,7 +21,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// ── Persistent Storage ──────────────────────────────────────────
+// ── Persistent Storage ──────────────────────────────────────────────
 async function requestPersistentStorage() {
   if (!navigator.storage || !navigator.storage.persist) return;
   try {
@@ -38,10 +39,10 @@ async function requestPersistentStorage() {
   }
 }
 
-// ── Tab Navigation ──────────────────────────────────────────────
+// ── Tab Navigation ──────────────────────────────────────────────────
 function initNavigation() {
   const navBtns = document.querySelectorAll('.nav-btn');
-  const views = document.querySelectorAll('.view');
+  const views   = document.querySelectorAll('.view');
 
   navBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -52,9 +53,9 @@ function initNavigation() {
   });
 }
 
-// ── Boot ────────────────────────────────────────────────────────
+// ── Boot ────────────────────────────────────────────────────────────
 async function init() {
-  requestPersistentStorage(); // Fire and forget
+  requestPersistentStorage(); // fire and forget
 
   const store = new IndexedDBStore();
   try {
@@ -70,6 +71,7 @@ async function init() {
   initNavigation();
   initDrill();
   initSession(targetProvider, store);
+  initArv(targetProvider, store);
   initJournal(store);
 }
 

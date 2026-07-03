@@ -971,3 +971,274 @@ label {
 .modal-content::-webkit-scrollbar {
   width: 0;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   ARV – Associative Remote Viewing
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Container */
+.arv-container {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.arv-header {
+  margin-bottom: 12px;
+}
+
+.arv-action-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+/* Stats Card */
+.arv-stats-card {
+  margin-bottom: 16px;
+}
+
+.arv-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+
+.arv-stat {}
+
+.arv-stat-num {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.2;
+}
+
+.arv-stat-sig {
+  color: var(--success) !important;
+}
+
+.arv-stat-lbl {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+.arv-conf-breakdown {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.arv-conf-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.conf-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: capitalize;
+  min-width: 56px;
+  text-align: center;
+}
+
+.conf-hoch    { background: rgba(76, 175, 125, 0.2); color: var(--success); }
+.conf-mittel  { background: rgba(124, 115, 230, 0.2); color: var(--primary); }
+.conf-niedrig { background: rgba(233, 108, 108, 0.15); color: var(--accent); }
+
+/* Status Badges */
+.arv-status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 10px;
+  letter-spacing: 0.03em;
+}
+
+.badge-setup    { background: rgba(136, 136, 160, 0.2); color: var(--text-muted); }
+.badge-session  { background: rgba(76, 175, 125, 0.2);  color: var(--success); }
+.badge-judged   { background: rgba(233, 108, 108, 0.15); color: var(--accent); }
+.badge-resolved { background: rgba(124, 115, 230, 0.2); color: var(--primary); }
+
+/* Trial Card Adjustments */
+.arv-card { cursor: pointer; }
+
+.arv-thumb {
+  font-size: 28px;
+}
+
+.arv-card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.arv-hit-chip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.arv-hit-chip.hit  { background: rgba(76, 175, 125, 0.25); color: var(--success); }
+.arv-hit-chip.miss { background: rgba(233, 108, 108, 0.2); color: var(--accent); }
+
+.arv-action-hint {
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.arv-question-preview {
+  font-size: 13px;
+  color: var(--text);
+  margin: 3px 0 4px;
+  line-height: 1.4;
+}
+
+/* Form */
+.arv-form {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.arv-back-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 4px 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
+.btn-back:active { opacity: 0.6; }
+
+.arv-text-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.arv-text-input:focus { border-color: var(--border-focus); }
+
+/* Detail view */
+.arv-detail-wrap {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* Outcome pills */
+.arv-outcomes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.arv-outcome-pill {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.arv-outcome-pill.o1 { background: rgba(76, 175, 125, 0.15); color: var(--success); }
+.arv-outcome-pill.o2 { background: rgba(233, 108, 108, 0.12); color: var(--accent); }
+
+/* Task card */
+.arv-task-card {
+  margin-top: 12px;
+  text-align: center;
+  border-color: var(--primary);
+  background: rgba(124, 115, 230, 0.06);
+}
+
+/* Sealed card */
+.arv-sealed-card {
+  border-color: var(--accent);
+  background: rgba(233, 108, 108, 0.06);
+  padding: 24px 16px;
+}
+
+/* Resolution: outcome selection */
+.arv-resolve-card {
+  border-color: var(--primary);
+  background: rgba(124, 115, 230, 0.06);
+}
+
+.arv-outcome-select {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.arv-outcome-select-btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+  transition: all var(--transition);
+  -webkit-tap-highlight-color: transparent;
+  text-align: left;
+}
+
+.arv-outcome-select-btn:active {
+  border-color: var(--primary);
+  background: rgba(124, 115, 230, 0.15);
+  transform: scale(0.99);
+}
+
+/* Verdict */
+.arv-verdict-card {
+  text-align: center;
+  padding: 24px 16px;
+}
+
+.arv-verdict-text {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.arv-verdict-hit  { color: var(--success); }
+.arv-verdict-miss { color: var(--accent); }
+
+/* Utility */
+.text-success { color: var(--success) !important; }
+.text-accent  { color: var(--accent)  !important; }
